@@ -75,7 +75,7 @@ st.markdown("""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# FUZZY LOGIC ENGINE (from scratch — sama persis dengan notebook)
+# FUZZY LOGIC ENGINE 
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def trimf(x, a, b, c):
@@ -166,21 +166,21 @@ def sugeno_infer(irr_v, amb_v, mod_v):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Header
-st.markdown("""
-<div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            padding: 32px; border-radius: 16px; margin-bottom: 24px; text-align: center;">
-    <div style="font-size: 48px; margin-bottom: 8px;">☀️</div>
-    <h1 style="color: #fbbf24; font-family: Space Grotesk; font-size: 28px; margin: 0;">
-        Fuzzy Logic PLTS
-    </h1>
-    <p style="color: #94a3b8; margin: 8px 0 0 0; font-size: 14px;">
-        Estimasi Output Daya DC · Mamdani & Sugeno <em>From Scratch</em> · DKA TUBES
-    </p>
-    <p style="color: #64748b; margin: 4px 0 0 0; font-size: 12px;">
-        Kafin Fazlur Rahman · Dzaki Khothir · Wahyu Widodo
-    </p>
-</div>
-""", unsafe_allow_html=True)
+# st.markdown("""
+# <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+#             padding: 32px; border-radius: 16px; margin-bottom: 24px; text-align: center;">
+#     <div style="font-size: 48px; margin-bottom: 8px;">☀️</div>
+#     <h1 style="color: #fbbf24; font-family: Space Grotesk; font-size: 28px; margin: 0;">
+#         Fuzzy Logic PLTS
+#     </h1>
+#     <p style="color: #94a3b8; margin: 8px 0 0 0; font-size: 14px;">
+#         Estimasi Output Daya DC · Mamdani & Sugeno <em>From Scratch</em> · DKA TUBES
+#     </p>
+#     <p style="color: #64748b; margin: 4px 0 0 0; font-size: 12px;">
+#         Kafin Fazlur Rahman · Dzaki Khothir · Wahyu Widodo
+#     </p>
+# </div>
+# """, unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["🔢 Kalkulator Fuzzy", "📊 Fungsi Keanggotaan", "📋 Rule Base"])
 

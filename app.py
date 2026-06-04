@@ -386,28 +386,44 @@ with tab4:
     </div>
     """, unsafe_allow_html=True)
 
-    uploaded_csv = st.file_uploader("Upload CSV Dataset", type=["csv"], help="Pastikan dataset memiliki kolom irradiation, ambient temp, module temp, dan DC power aktual")
+    st.markdown("""
+    <div style="background:#1e293b; border-radius:8px; padding:12px 16px; color:#94a3b8; font-size:13px; margin-bottom:12px;">
+        📌 Upload <strong style="color:white;">2 file CSV</strong>: <code>Generation Data</code> (berisi DC_POWER) dan <code>Weather Sensor Data</code> (berisi IRRADIATION, AMBIENT_TEMPERATURE, MODULE_TEMPERATURE).<br>
+        Sistem akan merge otomatis berdasarkan DATE_TIME, lalu agregasi DC_POWER semua inverter per timestamp.
+    </div>
+    """, unsafe_allow_html=True)
 
-    if uploaded_csv is not None:
+    uc1, uc2 = st.columns(2)
+    with uc1:
+        uploaded_gen = st.file_uploader("⚡ Generation Data CSV", type=["csv"], key="gen_csv")
+    with uc2:
+        uploaded_wea = st.file_uploader("🌤️ Weather Sensor CSV", type=["csv"], key="wea_csv")
+
+    if uploaded_gen is not None and uploaded_wea is not None:
         try:
-            df_raw = pd.read_csv(uploaded_csv)
-            st.success(f"✅ Dataset berhasil dimuat: **{len(df_raw):,} baris**, **{len(df_raw.columns)} kolom**")
+            df_gen = pd.read_csv(uploaded_gen)
+            df_wea = pd.read_csv(uploaded_wea)
 
-            with st.expander("👁️ Preview 5 Baris Pertama"):
+            # Normalize DATE_TIME
+            df_gen['DATE_TIME'] = pd.to_datetime(df_gen['DATE_TIME'], dayfirst=True)
+            df_wea['DATE_TIME'] = pd.to_datetime(df_wea['DATE_TIME'])
+
+            # Aggregate generation: sum DC_POWER semua inverter per timestamp
+            df_gen_agg = df_gen.groupby('DATE_TIME', as_index=False)['DC_POWER'].sum()
+
+            # Merge
+            df_raw = pd.merge(df_gen_agg, df_wea[['DATE_TIME','AMBIENT_TEMPERATURE','MODULE_TEMPERATURE','IRRADIATION']], on='DATE_TIME', how='inner')
+            df_raw = df_raw.dropna().reset_index(drop=True)
+
+            st.success(f"✅ Merge berhasil: **{len(df_raw):,} baris** · {df_gen.shape[0]:,} baris generation + {df_wea.shape[0]:,} baris weather")
+
+            with st.expander("👁️ Preview 5 Baris Pertama (setelah merge)"):
                 st.dataframe(df_raw.head(), use_container_width=True)
 
-            st.markdown('<div class="section-header">🔧 Mapping Kolom</div>', unsafe_allow_html=True)
-            cols = df_raw.columns.tolist()
-
-            mc1, mc2, mc3, mc4 = st.columns(4)
-            with mc1:
-                col_irr = st.selectbox("☀️ Kolom Irradiation (kW/m²)", cols, index=cols.index(next((c for c in cols if 'irrad' in c.lower() or 'ghi' in c.lower() or 'radiation' in c.lower()), cols[0])))
-            with mc2:
-                col_amb = st.selectbox("🌡️ Kolom Ambient Temp (°C)", cols, index=cols.index(next((c for c in cols if 'ambient' in c.lower() or 'amb' in c.lower() or 'temp_a' in c.lower()), cols[0])))
-            with mc3:
-                col_mod = st.selectbox("🔥 Kolom Module Temp (°C)", cols, index=cols.index(next((c for c in cols if 'module' in c.lower() or 'mod' in c.lower() or 'temp_m' in c.lower()), cols[0])))
-            with mc4:
-                col_act = st.selectbox("⚡ Kolom DC Power Aktual (W)", cols, index=cols.index(next((c for c in cols if 'dc' in c.lower() or 'power' in c.lower() or 'output' in c.lower()), cols[0])))
+            col_irr = 'IRRADIATION'
+            col_amb = 'AMBIENT_TEMPERATURE'
+            col_mod = 'MODULE_TEMPERATURE'
+            col_act = 'DC_POWER'
 
             # Sampling option untuk dataset besar
             max_rows = len(df_raw)
@@ -557,16 +573,16 @@ with tab4:
                 )
 
         except Exception as e:
-            st.error(f"❌ Error membaca file: {e}")
+            st.error(f"❌ Error: {e}")
     else:
         st.markdown("""
         <div style="background:#1e293b; border:2px dashed #334155; border-radius:12px;
                     padding:40px; text-align:center; color:#475569; margin-top:16px;">
             <div style="font-size:40px; margin-bottom:12px;">📁</div>
-            <div style="font-size:15px; color:#64748b;">Upload file CSV dataset di atas untuk memulai evaluasi</div>
+            <div style="font-size:15px; color:#64748b;">Upload kedua file CSV di atas untuk memulai evaluasi</div>
             <div style="font-size:12px; color:#475569; margin-top:8px;">
-                Contoh kolom yang dibutuhkan: <code>IRRADIATION</code>, <code>AMBIENT_TEMPERATURE</code>,
-                <code>MODULE_TEMPERATURE</code>, <code>DC_POWER</code>
+                <strong>Generation Data:</strong> DATE_TIME, DC_POWER (+ kolom lain) &nbsp;|&nbsp;
+                <strong>Weather Sensor:</strong> DATE_TIME, IRRADIATION, AMBIENT_TEMPERATURE, MODULE_TEMPERATURE
             </div>
         </div>
         """, unsafe_allow_html=True)

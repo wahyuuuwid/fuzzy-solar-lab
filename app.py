@@ -119,12 +119,14 @@ MOD_MF = [mod_rendah, mod_sedang, mod_tinggi, mod_stinggi]
 OUT_MF = [dc_srendah, dc_rendah, dc_sedang, dc_tinggi, dc_stinggi]
 
 RULES = [
-    (0,0,0,0),(0,1,0,0),(0,2,1,0),
+    # Irradiation RENDAH
+    (0,0,0,0),(0,1,0,0),(0,2,1,0),(0,0,1,0),(0,1,2,0),
+    # Irradiation SEDANG
     (1,0,0,2),(1,0,1,2),(1,1,1,2),(1,1,2,1),
-    (1,2,2,1),(1,2,3,0),
+    (1,2,2,1),(1,2,3,0),(1,0,3,1),(1,1,0,2),
+    # Irradiation TINGGI
     (2,0,0,4),(2,0,1,4),(2,1,1,3),(2,1,2,3),
-    (2,2,2,2),(2,2,3,1),(2,2,3,1),
-    (1,0,1,2),(2,1,0,4),(1,2,2,1),(0,1,1,0),
+    (2,2,2,2),(2,2,3,1),(2,1,0,4),
 ]
 
 SINGLETON = {0:20_000, 1:80_000, 2:160_000, 3:240_000, 4:305_000}
@@ -166,23 +168,23 @@ def sugeno_infer(irr_v, amb_v, mod_v):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Header
-# st.markdown("""
-# <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-#             padding: 32px; border-radius: 16px; margin-bottom: 24px; text-align: center;">
-#     <div style="font-size: 48px; margin-bottom: 8px;">☀️</div>
-#     <h1 style="color: #fbbf24; font-family: Space Grotesk; font-size: 28px; margin: 0;">
-#         Fuzzy Logic PLTS
-#     </h1>
-#     <p style="color: #94a3b8; margin: 8px 0 0 0; font-size: 14px;">
-#         Estimasi Output Daya DC · Mamdani & Sugeno <em>From Scratch</em> · DKA TUBES
-#     </p>
-#     <p style="color: #64748b; margin: 4px 0 0 0; font-size: 12px;">
-#         Kafin Fazlur Rahman · Dzaki Khothir · Wahyu Widodo
-#     </p>
-# </div>
-# """, unsafe_allow_html=True)
+st.markdown("""
+<div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            padding: 32px; border-radius: 16px; margin-bottom: 24px; text-align: center;">
+    <div style="font-size: 48px; margin-bottom: 8px;">☀️</div>
+    <h1 style="color: #fbbf24; font-family: Space Grotesk; font-size: 28px; margin: 0;">
+        Fuzzy Logic PLTS
+    </h1>
+    <p style="color: #94a3b8; margin: 8px 0 0 0; font-size: 14px;">
+        Estimasi Output Daya DC · Mamdani &amp; Sugeno <em>From Scratch</em> · DKA TUBES
+    </p>
+    <p style="color: #64748b; margin: 4px 0 0 0; font-size: 12px;">
+        Kafin Fazlur Rahman · Dzaki Khothir · Wahyu Widodo
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs(["🔢 Kalkulator Fuzzy", "📊 Fungsi Keanggotaan", "📋 Rule Base"])
+tab1, tab2, tab3, tab4 = st.tabs(["🔢 Kalkulator Fuzzy", "📊 Fungsi Keanggotaan", "📋 Rule Base", "📂 Evaluasi Dataset"])
 
 # ─── TAB 1: KALKULATOR ────────────────────────────────────────────────────────
 with tab1:
@@ -372,7 +374,204 @@ with tab3:
     })
     st.dataframe(df_comp, use_container_width=True, hide_index=True)
 
-# Footer
+# ─── TAB 4: EVALUASI DATASET ──────────────────────────────────────────────────
+with tab4:
+    st.markdown('<div class="section-header">📂 Evaluasi Performa dengan Dataset</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="background:#1e293b; border-radius:10px; padding:14px 18px; color:#94a3b8; font-size:13px; line-height:1.8; margin-bottom:16px;">
+        Upload file CSV dari dataset PLTS, lalu mapping kolom ke variabel input fuzzy.<br>
+        Sistem akan menghitung prediksi Mamdani & Sugeno untuk setiap baris, lalu membandingkan dengan nilai aktual (ground truth).<br>
+        <strong style="color:#fbbf24;">Metrik:</strong> MAE, MSE, RMSE — sesuai ketentuan evaluasi tugas besar.
+    </div>
+    """, unsafe_allow_html=True)
+
+    uploaded_csv = st.file_uploader("Upload CSV Dataset", type=["csv"], help="Pastikan dataset memiliki kolom irradiation, ambient temp, module temp, dan DC power aktual")
+
+    if uploaded_csv is not None:
+        try:
+            df_raw = pd.read_csv(uploaded_csv)
+            st.success(f"✅ Dataset berhasil dimuat: **{len(df_raw):,} baris**, **{len(df_raw.columns)} kolom**")
+
+            with st.expander("👁️ Preview 5 Baris Pertama"):
+                st.dataframe(df_raw.head(), use_container_width=True)
+
+            st.markdown('<div class="section-header">🔧 Mapping Kolom</div>', unsafe_allow_html=True)
+            cols = df_raw.columns.tolist()
+
+            mc1, mc2, mc3, mc4 = st.columns(4)
+            with mc1:
+                col_irr = st.selectbox("☀️ Kolom Irradiation (kW/m²)", cols, index=cols.index(next((c for c in cols if 'irrad' in c.lower() or 'ghi' in c.lower() or 'radiation' in c.lower()), cols[0])))
+            with mc2:
+                col_amb = st.selectbox("🌡️ Kolom Ambient Temp (°C)", cols, index=cols.index(next((c for c in cols if 'ambient' in c.lower() or 'amb' in c.lower() or 'temp_a' in c.lower()), cols[0])))
+            with mc3:
+                col_mod = st.selectbox("🔥 Kolom Module Temp (°C)", cols, index=cols.index(next((c for c in cols if 'module' in c.lower() or 'mod' in c.lower() or 'temp_m' in c.lower()), cols[0])))
+            with mc4:
+                col_act = st.selectbox("⚡ Kolom DC Power Aktual (W)", cols, index=cols.index(next((c for c in cols if 'dc' in c.lower() or 'power' in c.lower() or 'output' in c.lower()), cols[0])))
+
+            # Sampling option untuk dataset besar
+            max_rows = len(df_raw)
+            sample_size = st.slider("Jumlah baris yang dievaluasi (sample)", min_value=100, max_value=min(max_rows, 5000), value=min(1000, max_rows), step=100,
+                                    help="Dataset besar bisa lambat — gunakan sample representatif")
+
+            if st.button("🚀 JALANKAN EVALUASI", use_container_width=True):
+                df_eval = df_raw[[col_irr, col_amb, col_mod, col_act]].dropna().sample(n=sample_size, random_state=42).reset_index(drop=True)
+
+                # Clamp input ke range MF
+                df_eval[col_irr] = df_eval[col_irr].clip(0.0, 1.25)
+                df_eval[col_amb] = df_eval[col_amb].clip(20.0, 36.0)
+                df_eval[col_mod] = df_eval[col_mod].clip(18.0, 66.0)
+
+                progress = st.progress(0, text="Menghitung inferensi fuzzy...")
+                mamdani_preds, sugeno_preds = [], []
+
+                for i, row in df_eval.iterrows():
+                    m_res, _ = mamdani_infer(row[col_irr], row[col_amb], row[col_mod])
+                    s_res    = sugeno_infer(row[col_irr], row[col_amb], row[col_mod])
+                    mamdani_preds.append(m_res)
+                    sugeno_preds.append(s_res)
+                    if i % 100 == 0:
+                        progress.progress(int((i+1)/sample_size * 100), text=f"Memproses baris {i+1}/{sample_size}...")
+
+                progress.progress(100, text="✅ Selesai!")
+
+                df_eval["Pred_Mamdani (W)"] = mamdani_preds
+                df_eval["Pred_Sugeno (W)"]  = sugeno_preds
+                aktual = df_eval[col_act].values
+
+                # Hitung metrik
+                def mae(y, yhat):  return float(np.mean(np.abs(y - yhat)))
+                def mse(y, yhat):  return float(np.mean((y - yhat) ** 2))
+                def rmse(y, yhat): return float(np.sqrt(mse(y, yhat)))
+                def mape(y, yhat):
+                    mask = y != 0
+                    return float(np.mean(np.abs((y[mask] - yhat[mask]) / y[mask])) * 100)
+
+                metrics = {
+                    "Metrik": ["MAE (W)", "MSE (W²)", "RMSE (W)", "MAPE (%)"],
+                    "Mamdani": [
+                        f"{mae(aktual, np.array(mamdani_preds)):,.2f}",
+                        f"{mse(aktual, np.array(mamdani_preds)):,.2f}",
+                        f"{rmse(aktual, np.array(mamdani_preds)):,.2f}",
+                        f"{mape(aktual, np.array(mamdani_preds)):.2f}%",
+                    ],
+                    "Sugeno": [
+                        f"{mae(aktual, np.array(sugeno_preds)):,.2f}",
+                        f"{mse(aktual, np.array(sugeno_preds)):,.2f}",
+                        f"{rmse(aktual, np.array(sugeno_preds)):,.2f}",
+                        f"{mape(aktual, np.array(sugeno_preds)):.2f}%",
+                    ],
+                }
+
+                # Tampilkan metrik
+                st.markdown('<div class="section-header">📊 Hasil Evaluasi Performa</div>', unsafe_allow_html=True)
+
+                e1, e2, e3, e4 = st.columns(4)
+                mae_m = mae(aktual, np.array(mamdani_preds))
+                mae_s = mae(aktual, np.array(sugeno_preds))
+                rmse_m = rmse(aktual, np.array(mamdani_preds))
+                rmse_s = rmse(aktual, np.array(sugeno_preds))
+
+                for col_ui, label, val_m, val_s in [
+                    (e1, "MAE", mae_m, mae_s),
+                    (e2, "RMSE", rmse_m, rmse_s),
+                    (e3, "MSE", mse(aktual, np.array(mamdani_preds)), mse(aktual, np.array(sugeno_preds))),
+                    (e4, "MAPE", mape(aktual, np.array(mamdani_preds)), mape(aktual, np.array(sugeno_preds))),
+                ]:
+                    with col_ui:
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <div class="metric-label">{label}</div>
+                            <div style="font-size:13px; color:#60a5fa; margin:4px 0;">🔵 Mamdani: <strong>{val_m:,.1f}</strong></div>
+                            <div style="font-size:13px; color:#f43f5e;">🔴 Sugeno: <strong>{val_s:,.1f}</strong></div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.dataframe(pd.DataFrame(metrics), use_container_width=True, hide_index=True)
+
+                # Winner
+                winner = "Mamdani" if mae_m < mae_s else "Sugeno"
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #052e16, #14532d); border:1px solid #16a34a;
+                            border-radius:10px; padding:14px 20px; color:#86efac; font-size:14px; margin-top:8px;">
+                    🏆 Berdasarkan MAE, <strong style="color:#4ade80">{winner}</strong> memiliki error lebih rendah
+                    ({min(mae_m, mae_s):,.1f} W vs {max(mae_m, mae_s):,.1f} W)
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Scatter plot: Aktual vs Prediksi
+                st.markdown('<div class="section-header">📉 Visualisasi: Aktual vs Prediksi</div>', unsafe_allow_html=True)
+
+                fig2, axes2 = plt.subplots(1, 2, figsize=(16, 5), facecolor='#0f172a')
+                sample_vis = min(500, sample_size)
+                idx_vis = np.random.choice(sample_size, sample_vis, replace=False)
+
+                for ax, preds, title, color in [
+                    (axes2[0], np.array(mamdani_preds)[idx_vis], "Mamdani", '#60a5fa'),
+                    (axes2[1], np.array(sugeno_preds)[idx_vis],  "Sugeno",  '#f43f5e'),
+                ]:
+                    ax.set_facecolor('#1e293b')
+                    ax.scatter(aktual[idx_vis]/1000, preds/1000, alpha=0.4, s=12, color=color, label='Prediksi')
+                    lim_max = max(aktual.max(), max(preds)) / 1000 * 1.05
+                    ax.plot([0, lim_max], [0, lim_max], 'w--', lw=1.5, alpha=0.5, label='Ideal (y=x)')
+                    ax.set_xlabel('Aktual (kW)', color='#94a3b8')
+                    ax.set_ylabel('Prediksi (kW)', color='#94a3b8')
+                    ax.set_title(f'{title}: Aktual vs Prediksi', color='white')
+                    ax.tick_params(colors='#64748b')
+                    for sp in ax.spines.values(): sp.set_color('#334155')
+                    ax.legend(facecolor='#0f172a', labelcolor='white', fontsize=9)
+                    ax.grid(alpha=0.15, color='#334155')
+
+                plt.tight_layout()
+                st.pyplot(fig2)
+                plt.close()
+
+                # Error distribution
+                st.markdown('<div class="section-header">📊 Distribusi Error</div>', unsafe_allow_html=True)
+                fig3, ax3 = plt.subplots(figsize=(14, 4), facecolor='#0f172a')
+                ax3.set_facecolor('#1e293b')
+                err_m = (np.array(mamdani_preds) - aktual) / 1000
+                err_s = (np.array(sugeno_preds)  - aktual) / 1000
+                ax3.hist(err_m, bins=50, alpha=0.6, color='#60a5fa', label='Error Mamdani (kW)')
+                ax3.hist(err_s, bins=50, alpha=0.6, color='#f43f5e', label='Error Sugeno (kW)')
+                ax3.axvline(0, color='white', lw=1.5, linestyle='--', alpha=0.7)
+                ax3.set_xlabel('Error Prediksi (kW)', color='#94a3b8')
+                ax3.set_ylabel('Frekuensi', color='#94a3b8')
+                ax3.tick_params(colors='#64748b')
+                for sp in ax3.spines.values(): sp.set_color('#334155')
+                ax3.legend(facecolor='#0f172a', labelcolor='white')
+                ax3.grid(alpha=0.15, color='#334155')
+                plt.tight_layout()
+                st.pyplot(fig3)
+                plt.close()
+
+                # Download hasil
+                st.markdown('<div class="section-header">💾 Download Hasil Prediksi</div>', unsafe_allow_html=True)
+                csv_out = df_eval.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="⬇️ Download CSV Hasil Prediksi",
+                    data=csv_out,
+                    file_name="hasil_evaluasi_fuzzy_plts.csv",
+                    mime="text/csv",
+                )
+
+        except Exception as e:
+            st.error(f"❌ Error membaca file: {e}")
+    else:
+        st.markdown("""
+        <div style="background:#1e293b; border:2px dashed #334155; border-radius:12px;
+                    padding:40px; text-align:center; color:#475569; margin-top:16px;">
+            <div style="font-size:40px; margin-bottom:12px;">📁</div>
+            <div style="font-size:15px; color:#64748b;">Upload file CSV dataset di atas untuk memulai evaluasi</div>
+            <div style="font-size:12px; color:#475569; margin-top:8px;">
+                Contoh kolom yang dibutuhkan: <code>IRRADIATION</code>, <code>AMBIENT_TEMPERATURE</code>,
+                <code>MODULE_TEMPERATURE</code>, <code>DC_POWER</code>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
 st.markdown("""
 <div style="text-align:center; color:#475569; font-size:12px; margin-top:32px; padding-top:16px; border-top:1px solid #1e293b;">
     TUBES DKA 2526 · Implementasi Fuzzy Logic From Scratch · Telkom University Purwokerto<br>
